@@ -8,21 +8,22 @@ data/metadata/*
 !data/metadata/label_map.json
 !data/metadata/data_dictionary.md
 
-# Model artifacts
-models/
+# Model artifacts (leading slash = repo-root ONLY, so it never matches the
+# src/oct_cds/models/ Python package)
+/models/
 *.ckpt
 *.pt
 *.pth
 *.onnx
 
 # Experiment tracking / outputs
-outputs/
-multirun/
-mlruns/
-wandb/
-lightning_logs/
-reports/figures/*
-reports/metrics/*
+/outputs/
+/multirun/
+/mlruns/
+/wandb/
+/lightning_logs/
+/reports/figures/*
+/reports/metrics/*
 
 # Python
 __pycache__/
