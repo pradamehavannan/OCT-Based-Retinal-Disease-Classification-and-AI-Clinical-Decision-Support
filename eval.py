@@ -16,7 +16,6 @@ temperature scaling).
 from __future__ import annotations
 
 import gc
-import re
 import sys
 from pathlib import Path
 
@@ -27,45 +26,9 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from oct_cds.common.logging import get_logger  # noqa: E402
 from oct_cds.common.seed import seed_everything  # noqa: E402
+from oct_cds.models.loading import load_classifier, resolve_ckpt  # noqa: E402
 
 log = get_logger("eval")
-
-
-def _find_best_ckpt(ckpt_dir: Path) -> Path:
-    cands = [p for p in ckpt_dir.rglob("*.ckpt") if p.name != "last.ckpt"]
-    if not cands:
-        cands = list(ckpt_dir.rglob("*.ckpt"))
-    if not cands:
-        raise SystemExit(f"no .ckpt files under {ckpt_dir}")
-
-    def score(p: Path) -> float:
-        m = re.findall(r"([0-9]*\.[0-9]+)", p.name) or re.findall(
-            r"([0-9]*\.[0-9]+)", p.parent.name
-        )
-        return float(m[-1]) if m else -1.0
-
-    best = max(cands, key=lambda p: (score(p), p.stat().st_mtime))
-    log.info("auto-selected checkpoint: %s", best)
-    return best
-
-
-def _load_model(ckpt_path: Path, model_cfg: dict, train_cfg: dict):
-    import torch
-
-    from oct_cds.models.classifier import OCTClassifier
-
-    try:
-        model = OCTClassifier.load_from_checkpoint(
-            str(ckpt_path), map_location="cpu", model_cfg=model_cfg, training_cfg=train_cfg
-        )
-    except Exception as exc:  # noqa: BLE001 - fall back to manual state_dict load
-        log.warning("load_from_checkpoint failed (%s); loading state_dict manually", exc)
-        model = OCTClassifier(model_cfg, train_cfg)
-        sd = torch.load(str(ckpt_path), map_location="cpu")
-        model.load_state_dict(sd.get("state_dict", sd))
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return model.to(device).eval()
 
 
 def _get_calibrator(cfg, model, dm, out_dir: Path):
@@ -109,12 +72,7 @@ def main(cfg: DictConfig) -> None:
     out_dir = Path(cfg.output_dir) / "eval"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    ckpt_path = cfg.eval.get("ckpt_path")
-    ckpt_path = Path(ckpt_path) if ckpt_path else _find_best_ckpt(
-        Path(cfg.output_dir) / "checkpoints"
-    )
-    if not ckpt_path.exists():
-        raise SystemExit(f"checkpoint not found: {ckpt_path}")
+    ckpt_path = resolve_ckpt(cfg.eval.get("ckpt_path"), cfg.output_dir)
 
     manifest = Path(data_cfg["manifest"].get(split, ""))
     if not manifest.exists():
@@ -128,7 +86,7 @@ def main(cfg: DictConfig) -> None:
 
     dm = make_datamodule(data_cfg, pre_cfg, train_cfg)
     dm.setup("test")
-    model = _load_model(ckpt_path, model_cfg, train_cfg)
+    model = load_classifier(ckpt_path, model_cfg, train_cfg)
 
     try:
         calibrator = _get_calibrator(cfg, model, dm, out_dir)

@@ -22,6 +22,17 @@ eval:
   calibration: fit_val     # fit_val (refit temp on val) | load (temperature.json) | none
   bootstrap: true
 
+# used by explain.py (Grad-CAM)
+explain:
+  ckpt_path: null          # null => same auto-pick as eval
+  split: test              # test | external_test | val
+  classes: null            # null => all; or a list e.g. [Drusen] to filter by TRUE class
+  only_errors: false       # true => only images the model got wrong
+  target: pred             # pred (why it predicted that) | true | both
+  max_images: 200          # cap the number of overlays written
+  alpha: 0.45              # heatmap opacity in the blend
+  batch_size: 16
+
 # hydra run/output layout
 hydra:
   run:

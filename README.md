@@ -89,7 +89,22 @@ python eval.py paths=kaggle eval.ckpt_path=/path/to/some.ckpt eval.calibration=l
 > the confusion matrix, and ECE **before and after** temperature scaling.
 
 ```bash
-# 4. see the CDS rule engine on a synthetic case
+# 4. Grad-CAM overlays  (needs the explain extra: pip install -e '.[explain]')
+python explain.py paths=kaggle                                   # test set, <=200 overlays
+python explain.py paths=kaggle explain.split=external_test       # the 37 clinic scans
+python explain.py paths=kaggle explain.split=external_test \
+    'explain.classes=[Drusen]' explain.only_errors=true explain.target=both
+```
+> Overlays: `<output_dir>/explain/<split>/<correct|wrong>/<true_class>/<stem>__pred-<x>_p<conf>__cam-<pred|true>-<class>.png`
+> (each is `[ raw scan | heatmap overlay ]` on the model's 224px view). Plus
+> `index.csv` mapping every overlay to true / predicted / probability. So the
+> misclassified Drusen scans land in `.../explain/external_test/wrong/Drusen/`.
+> `explain.target=both` saves a heatmap for the predicted class *and* the true
+> class side by side — useful for seeing what the model latched onto instead of
+> the drusen.
+
+```bash
+# 5. see the CDS rule engine on a synthetic case
 python -m oct_cds.cli cds demo
 ```
 
