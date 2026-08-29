@@ -17,7 +17,7 @@ from oct_cds.common.paths import REPO_ROOT
 
 log = get_logger("cli")
 CONFIG_DIR = REPO_ROOT / "configs" / "data"
-PATHS_CFG = REPO_ROOT / "configs" / "paths" / "default.yaml"
+PATHS_DIR = REPO_ROOT / "configs" / "paths"
 
 # ${hydra:runtime.cwd} only exists under a Hydra run; outside it (this CLI) the
 # repo root is the right anchor. Registered once, idempotently.
@@ -27,15 +27,25 @@ if not OmegaConf.has_resolver("hydra"):
     )
 
 
-def _load_data_cfg(name: str, overrides: list[str] | None = None) -> dict:
-    """Compose  paths/default.yaml + data/<name>.yaml  exactly the way Hydra
+def _load_data_cfg(
+    name: str, overrides: list[str] | None = None, paths_name: str = "default"
+) -> dict:
+    """Compose  paths/<paths_name>.yaml + data/<name>.yaml  exactly the way Hydra
     would (data config sees ``${paths.*}``), then fully resolve interpolations.
 
-    ``overrides`` are dotlist strings like ``paths.oct_c8_raw_root=/some/path``.
+    ``paths_name`` selects the environment (e.g. "kaggle") — same as Hydra's
+    ``paths=<name>`` group override. ``overrides`` are dotlist strings like
+    ``paths.oct_c8_raw_root=/some/path``.
     """
+    paths_file = PATHS_DIR / f"{paths_name}.yaml"
+    if not paths_file.exists():
+        raise SystemExit(
+            f"unknown paths config {paths_name!r}: {paths_file} not found "
+            f"(available: {sorted(p.stem for p in PATHS_DIR.glob('*.yaml'))})"
+        )
     cfg = OmegaConf.create(
         {
-            "paths": OmegaConf.load(PATHS_CFG),
+            "paths": OmegaConf.load(paths_file),
             "data": OmegaConf.load(CONFIG_DIR / f"{name}.yaml"),
         }
     )
@@ -55,17 +65,18 @@ def cmd_data_build(args: argparse.Namespace) -> int:
 
     targets = args.only or ["oct_c8", "clinic_optopol"]
     overrides = args.set or []
+    paths_name = args.paths
     manifests: dict = {}
 
     if "oct_c8" in targets:
-        cfg = _load_data_cfg("oct_c8", overrides)
+        cfg = _load_data_cfg("oct_c8", overrides, paths_name)
         log.info("oct_c8 root -> %s", cfg["root"])
         m = build_oct_c8_manifest(cfg, probe_images=not args.fast)
         write_manifests(m, cfg)
         manifests.update(m)
 
     if "clinic_optopol" in targets:
-        cfg = _load_data_cfg("clinic_optopol", overrides)
+        cfg = _load_data_cfg("clinic_optopol", overrides, paths_name)
         log.info("clinic_optopol root -> %s", cfg["root"])
         df = build_optopol_manifest(cfg, probe_images=not args.fast)
         write_manifests({"external_test": df}, cfg)
@@ -103,6 +114,12 @@ def main(argv: list[str] | None = None) -> int:
     db = d.add_parser("build")
     db.add_argument("--only", nargs="*", choices=["oct_c8", "clinic_optopol"])
     db.add_argument("--fast", action="store_true", help="skip md5 / size probing")
+    db.add_argument(
+        "--paths",
+        default="default",
+        metavar="NAME",
+        help="paths config to use (configs/paths/<NAME>.yaml), e.g. --paths kaggle",
+    )
     db.add_argument(
         "--set",
         nargs="*",

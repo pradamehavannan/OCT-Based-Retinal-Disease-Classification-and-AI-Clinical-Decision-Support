@@ -43,34 +43,38 @@ tests/
 pip install -e ".[dev,explain]"
 ```
 
+Pick an environment via the `paths` config group — `configs/paths/<env>.yaml`
+holds the dataset + output locations for that machine:
+
+| env | file | OCT-C8 / clinic roots | outputs |
+|---|---|---|---|
+| `default` | `paths/default.yaml` | Colab + Google Drive | `/content/drive/MyDrive/oct_cds_outputs` |
+| `kaggle` | `paths/kaggle.yaml` | `/kaggle/input/...` (read-only) | `/kaggle/working/oct_cds_outputs` |
+
 ```bash
-# 1. point configs/paths/default.yaml at the datasets:
-#      paths.oct_c8_raw_root          -> dir containing train/ val/ test/
-#      paths.clinic_optopol_raw_root  -> the 37 clinic scans
-#    (currently set to the Colab/Drive location). Or override per-run:
-#      python train.py paths.oct_c8_raw_root=/path/to/RetinalOCT_Dataset
-# 2. build manifests (writes data/processed/*.csv)
-python -m oct_cds.cli data build
+# 1. build manifests (writes data/processed/*.csv). --paths selects the env;
+#    --set overrides any single path.
+python -m oct_cds.cli data build --paths kaggle
+#    or:  python -m oct_cds.cli data build --set paths.oct_c8_raw_root=/some/path
 ```
 
 ```bash
-# 3. train (DenseNet-121 primary; swap backbone from the CLI)
-python train.py model=densenet121 data=oct_c8
-python train.py model=resnet50
-python train.py model=efficientnet_b3 training.max_epochs=40
+# 2. train (DenseNet-121 primary; swap backbone / env from the CLI)
+python train.py paths=kaggle
+python train.py paths=kaggle model=resnet50
+python train.py model=efficientnet_b3 training.max_epochs=40   # default env
 ```
 
-> **Colab:**
-> - `training.num_workers` defaults to 2 (Colab has ~2 vCPUs). For speed, copy
->   OCT-C8 from the Drive mount to local disk (`/content/oct_c8`) first and pass
->   `paths.oct_c8_raw_root=/content/oct_c8` — FUSE is very slow for many small files.
-> - Outputs (checkpoints, calibrators, logs) go to `paths.outputs_root`, which
->   defaults to **`/content/drive/MyDrive/oct_cds_outputs`** so runs survive a
->   runtime disconnect. `checkpoints/last.ckpt` is written every epoch and a
->   re-run of the same command **auto-resumes** from it
->   (`training.auto_resume=false` to disable, `training.resume_from=<path>` to pick one).
-> - `train.py` hard-exits when run as `!python train.py` so the cell doesn't hang
->   on lingering DataLoader workers.
+> **Resume:** `checkpoints/last.ckpt` is written every epoch under
+> `paths.outputs_root`. Re-running the **same command** after a crash/disconnect
+> **auto-resumes** from it (`training.auto_resume=false` to disable,
+> `training.resume_from=<path>` to pick one). On Kaggle, `/kaggle/working` persists
+> with the notebook version; on Colab, outputs default to Google Drive.
+>
+> **Colab:** `training.num_workers` defaults to 2 (~2 vCPUs). For speed, copy
+> OCT-C8 off the Drive FUSE mount to `/content/oct_c8` first and pass
+> `paths.oct_c8_raw_root=/content/oct_c8`. `train.py` hard-exits when run as
+> `!python train.py` so the cell doesn't hang on lingering DataLoader workers.
 
 ```bash
 # 4. see the CDS rule engine on a synthetic case
