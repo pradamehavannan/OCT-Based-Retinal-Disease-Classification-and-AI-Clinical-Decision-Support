@@ -96,7 +96,9 @@ class OCTClassifier(_Base):
         self._epoch_end("test")
 
     def on_train_epoch_start(self):
-        if self._freeze_epochs and self.current_epoch == self._freeze_epochs:
+        # `>=` (not `==`) so a run resumed from a checkpoint past the warmup
+        # epoch still unfreezes the backbone. Idempotent.
+        if self._freeze_epochs and self.current_epoch >= self._freeze_epochs:
             set_backbone_frozen(self.net, False)
 
     # -- optim ----------------------------------------------------

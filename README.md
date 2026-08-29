@@ -60,11 +60,17 @@ python train.py model=resnet50
 python train.py model=efficientnet_b3 training.max_epochs=40
 ```
 
-> **Colab:** `training.num_workers` defaults to 2 (Colab has ~2 vCPUs). For speed,
-> copy OCT-C8 from the Drive mount to local disk (`/content/oct_c8`) first and pass
-> `paths.oct_c8_raw_root=/content/oct_c8` — the FUSE mount is very slow for many
-> small files. `train.py` hard-exits when run as `!python train.py` so the cell
-> doesn't hang on lingering DataLoader workers.
+> **Colab:**
+> - `training.num_workers` defaults to 2 (Colab has ~2 vCPUs). For speed, copy
+>   OCT-C8 from the Drive mount to local disk (`/content/oct_c8`) first and pass
+>   `paths.oct_c8_raw_root=/content/oct_c8` — FUSE is very slow for many small files.
+> - Outputs (checkpoints, calibrators, logs) go to `paths.outputs_root`, which
+>   defaults to **`/content/drive/MyDrive/oct_cds_outputs`** so runs survive a
+>   runtime disconnect. `checkpoints/last.ckpt` is written every epoch and a
+>   re-run of the same command **auto-resumes** from it
+>   (`training.auto_resume=false` to disable, `training.resume_from=<path>` to pick one).
+> - `train.py` hard-exits when run as `!python train.py` so the cell doesn't hang
+>   on lingering DataLoader workers.
 
 ```bash
 # 4. see the CDS rule engine on a synthetic case

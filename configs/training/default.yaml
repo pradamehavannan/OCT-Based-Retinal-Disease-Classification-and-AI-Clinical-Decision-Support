@@ -30,6 +30,12 @@ checkpoint:
   monitor: val/macro_f1
   mode: max
   save_top_k: 2
+  save_last: true          # writes checkpoints/last.ckpt every epoch
+
+# Crash/disconnect recovery. On Colab, outputs go to Drive (see paths config),
+# so a re-run of the same command picks up checkpoints/last.ckpt automatically.
+auto_resume: true
+resume_from: null          # set to a checkpoint path to force-resume from it
 
 precision: 16-mixed
 accelerator: auto

@@ -66,12 +66,15 @@ def main(cfg: DictConfig) -> float:
 
     ckpt_cfg = train_cfg.get("checkpoint", {})
     es_cfg = train_cfg.get("early_stopping", {})
+    ckpt_dir = Path(cfg.output_dir) / "checkpoints"
     ckpt = ModelCheckpoint(
-        dirpath=Path(cfg.output_dir) / "checkpoints",
+        dirpath=ckpt_dir,
         filename="{epoch}-{val/macro_f1:.4f}",
         monitor=ckpt_cfg.get("monitor", "val/macro_f1"),
         mode=ckpt_cfg.get("mode", "max"),
         save_top_k=int(ckpt_cfg.get("save_top_k", 2)),
+        save_last=bool(ckpt_cfg.get("save_last", True)),   # last.ckpt -> resume anchor
+        every_n_epochs=1,
     )
     callbacks = [
         ckpt,
@@ -93,9 +96,25 @@ def main(cfg: DictConfig) -> float:
         callbacks=callbacks,
     )
 
+    # Resume automatically from the last checkpoint of a previous (interrupted)
+    # run in the same output dir, unless training.auto_resume=false or an explicit
+    # training.resume_from=<path> is given.
+    resume_from = train_cfg.get("resume_from")
+    if not resume_from and train_cfg.get("auto_resume", True):
+        last = ckpt_dir / "last.ckpt"
+        if last.exists():
+            resume_from = str(last)
+    if resume_from:
+        log.info("RESUMING from %s", resume_from)
+
     best_f1 = 0.0
     try:
-        trainer.fit(model, dm.train_dataloader(), dm.val_dataloader())
+        trainer.fit(
+            model,
+            dm.train_dataloader(),
+            dm.val_dataloader(),
+            ckpt_path=resume_from,
+        )
 
         best_f1 = float(ckpt.best_model_score) if ckpt.best_model_score is not None else 0.0
         log.info("best val/macro_f1 = %.4f (%s)", best_f1, ckpt.best_model_path)
