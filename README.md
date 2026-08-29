@@ -67,27 +67,27 @@ feature-space OOD detection) is a TODO — see [LIMITATIONS.md](LIMITATIONS.md).
 
 ### Grad-CAM — misclassified clinic Drusen
 
-<!-- Add two overlay strips to docs/figures/ to populate these — see docs/figures/README.md -->
-![DRUSEN_3__L — raw scan · Grad-CAM for predicted class (Normal, 0.88) · Grad-CAM for true class (Drusen)](docs/figures/gradcam_drusen_wrong_1.png)
-![DRUSEN_4__L — raw scan · Grad-CAM for predicted class (CSR, 0.54) · Grad-CAM for true class (Drusen)](docs/figures/gradcam_drusen_wrong_2.png)
+![DRUSEN_3__L — raw B-scan · Grad-CAM for the predicted class Normal (0.88)](docs/figures/gradcam_drusen_wrong_1.png)
+![DRUSEN_4__L — raw B-scan · Grad-CAM for the predicted class CSR (0.54)](docs/figures/gradcam_drusen_wrong_2.png)
 
-Each panel is `[ raw B-scan | Grad-CAM for the predicted (wrong) class | Grad-CAM
-for the true Drusen class ]` on the model's 224 px input view.
+Each strip is `[ raw B-scan | Grad-CAM for the predicted (wrong) class ]` on the
+model's 224 px input view.
 
-**Finding: correct localisation, wrong classification.** Across the 4 Drusen
-misclassification pairs reviewed, 3 of 4 show the predicted- and true-class
-heatmaps landing in nearly the **same** region — the model finds the
-pathological area but misreads what it represents (8 of 14 misclassified Drusen
-scans were called `Normal`). Only one case (`DRUSEN_9__L` → DME) showed genuinely
-divergent attention. The failure is semantic, not spatial, so a saliency-overlap
-check would not flag it — reinforcing the case for feature-space OOD detection in
-the CDS layer ([LIMITATIONS.md](LIMITATIONS.md)).
+**Finding: correct localisation, wrong classification.** Even when the model
+calls these scans `Normal`/`CSR`, its Grad-CAM for that wrong class still sits on
+the drusen region — and across the 4 misclassification pairs reviewed with
+`explain.target=both`, 3 of 4 had the predicted- and true-class heatmaps in
+nearly the **same** place (only `DRUSEN_9__L` → DME diverged). 8 of 14
+misclassified Drusen scans were called `Normal`. So the error is *semantic, not
+spatial*: the model attends to the pathology but misreads what it is. A
+saliency-overlap or "is it looking at the retina?" check would not flag this —
+reinforcing the case for feature-space OOD detection in the CDS layer
+([LIMITATIONS.md](LIMITATIONS.md)).
 
-The two files above are copied from the run outputs —
-**[docs/figures/README.md](docs/figures/README.md) has the selection criteria and
-copy commands** (the links render broken until you add the PNGs). Regenerate the
-source overlays with `python explain.py paths=<env> explain.split=external_test
-'explain.classes=[Drusen]' explain.only_errors=true explain.target=both`.
+Source overlays and the selection rationale:
+[docs/figures/README.md](docs/figures/README.md). Regenerate with `python
+explain.py paths=<env> explain.split=external_test 'explain.classes=[Drusen]'
+explain.only_errors=true explain.target=both`.
 
 ## Layout
 
@@ -169,8 +169,8 @@ python explain.py paths=kaggle explain.split=external_test \
 > `index.csv` mapping every overlay to true / predicted / probability. So the
 > misclassified Drusen scans land in `.../explain/external_test/wrong/Drusen/`.
 > `explain.target=both` saves a heatmap for the predicted class *and* the true
-> class side by side — useful for seeing what the model latched onto instead of
-> the drusen.
+> class side by side — for checking whether the model attended to the same region
+> for both (it usually did — see the Results section).
 
 ```bash
 # 5. CDS layer — run calibrated predictions through the rules/urgency/abstention
