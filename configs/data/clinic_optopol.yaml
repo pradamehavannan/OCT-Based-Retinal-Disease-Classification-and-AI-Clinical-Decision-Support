@@ -9,7 +9,7 @@ source: local
 use: [external_test]                  # the ONLY allowed use
 train_forbidden: true                 # manifest builder + trainer assert this
 
-root: ${paths.data_dir}/external/clinic_optopol
+root: ${paths.clinic_optopol_raw_root}   # see configs/paths/default.yaml
 # Labels come from the FILENAME, not the folder (see oct_cds.data.optopol):
 #   {LABEL}[_{patient_num}]__{eye}.png    eye in {L, R, p0}
 # Files may sit directly under `root` or in one level of class subdirs; when a

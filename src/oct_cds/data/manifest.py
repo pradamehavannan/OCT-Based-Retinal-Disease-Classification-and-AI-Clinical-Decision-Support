@@ -36,6 +36,29 @@ MANIFEST_COLUMNS = [
 _IMG_EXT = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 
 
+class ManifestBuildError(RuntimeError):
+    """Raised when a manifest cannot be built correctly (missing paths, 0 images).
+    We fail loudly rather than write an empty CSV that looks like success."""
+
+
+def _require_resolved(value: str, field: str) -> str:
+    if "${" in str(value):
+        raise ManifestBuildError(
+            f"unresolved interpolation in data config field {field!r}: {value!r}. "
+            f"Check configs/paths/default.yaml and how the config is being loaded."
+        )
+    return str(value)
+
+
+def _require_dir(path: Path, what: str, hint: str = "") -> Path:
+    if not path.is_dir():
+        msg = f"{what} does not exist or is not a directory: {path}"
+        if hint:
+            msg += f"\n  hint: {hint}"
+        raise ManifestBuildError(msg)
+    return path
+
+
 def _md5(path: Path, probe: bool) -> str:
     if not probe:
         return ""
@@ -66,21 +89,32 @@ def build_oct_c8_manifest(
     probe_images: bool = True,
 ) -> dict[str, pd.DataFrame]:
     lm = label_map or load_label_map(cfg.get("label_map"))
-    root = Path(cfg["root"])
+    root = Path(_require_resolved(cfg["root"], "root"))
     class_dir_map: dict[str, str] = cfg["class_dir_map"]  # canonical_key -> dir name
     out: dict[str, pd.DataFrame] = {}
 
+    _require_dir(
+        root,
+        "OCT-C8 raw root",
+        hint="set paths.oct_c8_raw_root in configs/paths/default.yaml "
+        "(or pass paths.oct_c8_raw_root=... on the CLI)",
+    )
+
     for split, split_dir in cfg["split_dirs"].items():
         rows: list[dict[str, Any]] = []
-        split_root = root / split_dir
+        split_root = _require_dir(root / split_dir, f"OCT-C8 '{split}' split dir")
         for canonical_key, dir_name in class_dir_map.items():
             lm.id(canonical_key)  # fail fast on a bad canonical key in the config
             cls_dir = split_root / dir_name
             if not cls_dir.is_dir() and (split_root / canonical_key).is_dir():
                 cls_dir = split_root / canonical_key  # tolerate already-canonical dirs
             if not cls_dir.is_dir():
-                log.warning("missing class dir: %s", cls_dir)
-                continue
+                available = sorted(p.name for p in split_root.iterdir() if p.is_dir())
+                raise ManifestBuildError(
+                    f"class dir for {canonical_key!r} not found: {cls_dir}\n"
+                    f"  dirs present under {split_root}: {available}\n"
+                    f"  fix class_dir_map in configs/data/oct_c8.yaml"
+                )
             for img in sorted(cls_dir.iterdir()):
                 if img.suffix.lower() not in _IMG_EXT:
                     continue
@@ -106,6 +140,11 @@ def build_oct_c8_manifest(
                         "notes": "",
                     }
                 )
+        if not rows:
+            raise ManifestBuildError(
+                f"0 images found for OCT-C8 split {split!r} under {split_root}. "
+                f"Expected {list(class_dir_map.values())} subdirs with image files."
+            )
         df = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
         out[split] = df
         log.info("oct_c8 %s: %d images", split, len(df))
@@ -125,8 +164,14 @@ def build_optopol_manifest(
         raise ValueError("clinic_optopol config must be external_test-only")
 
     lm = label_map or load_label_map(cfg.get("label_map"))
-    root = Path(cfg["root"])
+    root = Path(_require_resolved(cfg["root"], "root"))
     rows: list[dict[str, Any]] = []
+
+    _require_dir(
+        root,
+        "clinic_optopol raw root",
+        hint="set paths.clinic_optopol_raw_root in configs/paths/default.yaml",
+    )
 
     # accept files directly under root or one level of class subdirs
     for img in sorted(root.rglob("*")):
@@ -157,6 +202,11 @@ def build_optopol_manifest(
             }
         )
 
+    if not rows:
+        raise ManifestBuildError(
+            f"0 images found for clinic_optopol under {root}. "
+            f"Expected files named '{{LABEL}}[_{{patient}}]__{{eye}}.png'."
+        )
     df = pd.DataFrame(rows, columns=MANIFEST_COLUMNS)
     assert (df["split"] == "external_test").all(), "OPTOPOL rows must be external_test"
     assert (df["dataset"] == "clinic_optopol").all()
@@ -194,7 +244,11 @@ def write_manifests(manifests: dict[str, pd.DataFrame], cfg: dict[str, Any]) -> 
     for split, df in manifests.items():
         if split not in targets:
             continue
-        dest = Path(targets[split])
+        if df.empty:
+            raise ManifestBuildError(
+                f"refusing to write an empty manifest for split {split!r} -> {targets[split]}"
+            )
+        dest = Path(_require_resolved(targets[split], f"manifest.{split}"))
         dest.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(dest, index=False)
         log.info("wrote %s (%d rows)", dest, len(df))

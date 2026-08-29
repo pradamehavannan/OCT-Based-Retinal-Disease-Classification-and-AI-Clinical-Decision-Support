@@ -44,8 +44,11 @@ pip install -e ".[dev,explain]"
 ```
 
 ```bash
-# 1. put OCT-C8 under data/raw/oct_c8/{train,val,test}/<CLASS>/  and the
-#    clinic scans under data/external/clinic_optopol/
+# 1. point configs/paths/default.yaml at the datasets:
+#      paths.oct_c8_raw_root          -> dir containing train/ val/ test/
+#      paths.clinic_optopol_raw_root  -> the 37 clinic scans
+#    (currently set to the Colab/Drive location). Or override per-run:
+#      python train.py paths.oct_c8_raw_root=/path/to/RetinalOCT_Dataset
 # 2. build manifests (writes data/processed/*.csv)
 python -m oct_cds.cli data build
 ```

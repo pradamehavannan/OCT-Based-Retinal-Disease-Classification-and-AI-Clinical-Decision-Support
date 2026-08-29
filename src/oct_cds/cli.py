@@ -9,22 +9,40 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 
-import yaml
+from omegaconf import OmegaConf
 
 from oct_cds.common.logging import get_logger
 from oct_cds.common.paths import REPO_ROOT
 
 log = get_logger("cli")
 CONFIG_DIR = REPO_ROOT / "configs" / "data"
+PATHS_CFG = REPO_ROOT / "configs" / "paths" / "default.yaml"
+
+# ${hydra:runtime.cwd} only exists under a Hydra run; outside it (this CLI) the
+# repo root is the right anchor. Registered once, idempotently.
+if not OmegaConf.has_resolver("hydra"):
+    OmegaConf.register_new_resolver(
+        "hydra", lambda key: str(REPO_ROOT) if key == "runtime.cwd" else key
+    )
 
 
-def _load_data_cfg(name: str) -> dict:
-    raw = (CONFIG_DIR / f"{name}.yaml").read_text(encoding="utf-8")
-    # resolve the two interpolations we use in data configs without full Hydra
-    raw = raw.replace("${paths.data_dir}", str(REPO_ROOT / "data"))
-    return yaml.safe_load(raw)
+def _load_data_cfg(name: str, overrides: list[str] | None = None) -> dict:
+    """Compose  paths/default.yaml + data/<name>.yaml  exactly the way Hydra
+    would (data config sees ``${paths.*}``), then fully resolve interpolations.
+
+    ``overrides`` are dotlist strings like ``paths.oct_c8_raw_root=/some/path``.
+    """
+    cfg = OmegaConf.create(
+        {
+            "paths": OmegaConf.load(PATHS_CFG),
+            "data": OmegaConf.load(CONFIG_DIR / f"{name}.yaml"),
+        }
+    )
+    if overrides:
+        cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(overrides))
+    resolved = OmegaConf.to_container(cfg, resolve=True)  # raises on bad interpolation
+    return resolved["data"]
 
 
 def cmd_data_build(args: argparse.Namespace) -> int:
@@ -36,16 +54,19 @@ def cmd_data_build(args: argparse.Namespace) -> int:
     )
 
     targets = args.only or ["oct_c8", "clinic_optopol"]
+    overrides = args.set or []
     manifests: dict = {}
 
     if "oct_c8" in targets:
-        cfg = _load_data_cfg("oct_c8")
+        cfg = _load_data_cfg("oct_c8", overrides)
+        log.info("oct_c8 root -> %s", cfg["root"])
         m = build_oct_c8_manifest(cfg, probe_images=not args.fast)
         write_manifests(m, cfg)
         manifests.update(m)
 
     if "clinic_optopol" in targets:
-        cfg = _load_data_cfg("clinic_optopol")
+        cfg = _load_data_cfg("clinic_optopol", overrides)
+        log.info("clinic_optopol root -> %s", cfg["root"])
         df = build_optopol_manifest(cfg, probe_images=not args.fast)
         write_manifests({"external_test": df}, cfg)
         manifests["external_test"] = df
@@ -82,6 +103,12 @@ def main(argv: list[str] | None = None) -> int:
     db = d.add_parser("build")
     db.add_argument("--only", nargs="*", choices=["oct_c8", "clinic_optopol"])
     db.add_argument("--fast", action="store_true", help="skip md5 / size probing")
+    db.add_argument(
+        "--set",
+        nargs="*",
+        metavar="KEY=VALUE",
+        help="config overrides, e.g. --set paths.oct_c8_raw_root=/content/drive/.../RetinalOCT_Dataset",
+    )
     db.set_defaults(func=cmd_data_build)
 
     c = sub.add_parser("cds").add_subparsers(dest="action", required=True)

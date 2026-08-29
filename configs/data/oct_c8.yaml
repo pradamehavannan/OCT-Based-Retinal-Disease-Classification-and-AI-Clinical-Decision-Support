@@ -11,12 +11,19 @@ kaggle_slug: obulisainaren/retinal-oct-c8
 use: [train, val, test]          # this dataset supplies all three internal splits
 
 # ---------------------------------------------------------------------------
-# Layout after download (ImageFolder-style, one dir per class per split).
-# `class_dir_map` is  canonical_label_key -> on-disk folder name  (OCT-C8 ships
-# some dirs upper-cased / abbreviated). Canonical keys must match
-# data/metadata/label_map.json exactly.
+# Layout on disk (ImageFolder-style, one dir per class per split):
+#   <root>/{train,val,test}/{AMD,CNV,CSR,DME,DR,DRUSEN,MH,NORMAL}/*.png
+#
+# `root` comes from configs/paths/default.yaml (paths.oct_c8_raw_root) so the
+# out-of-repo dataset location is configured in exactly one place. Override with
+#   python train.py paths.oct_c8_raw_root=/path/to/RetinalOCT_Dataset
+#
+# class_dir_map format:   <canonical label key> : <exact folder name on disk>
+#   - LEFT  must match data/metadata/label_map.json (frozen class ids); do not change.
+#   - RIGHT is the literal directory name under train/ val/ test/ as downloaded.
+# The manifest builder reads images from  <split>/<RIGHT>/  and labels them <LEFT>.
 # ---------------------------------------------------------------------------
-root: ${paths.data_dir}/raw/oct_c8
+root: ${paths.oct_c8_raw_root}
 split_dirs:
   train: train
   val: val
@@ -28,8 +35,8 @@ class_dir_map:
   CSR: CSR
   DME: DME
   DR: DR
-  Drusen: DRUSEN
-  Macular Hole: MH
+  Drusen: DRUSEN          # folder is uppercase
+  Macular Hole: MH        # folder is the abbreviation, not spelled out
   Normal: NORMAL
 
 num_classes: 8
