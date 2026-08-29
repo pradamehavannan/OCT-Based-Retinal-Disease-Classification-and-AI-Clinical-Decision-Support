@@ -21,19 +21,78 @@ triage recommendation and a human-readable report.
 
 `data/` is git-ignored — patient scans never leave this machine.
 
+## Results
+
+**DenseNet-121** (ImageNet-pretrained, 224 px), best epoch 17 (val macro-F1
+0.9236), temperature-scaled on val.
+
+### Held-out test set — OCT-C8, 2,800 images
+
+| Metric | Value |
+|---|---|
+| Accuracy | **96.46%** |
+| Macro-F1 | **96.46%** |
+| Expected Calibration Error (after temperature scaling) | **0.64%** |
+
+Per-class sensitivity / specificity / precision / F1 / AUROC / AUPRC and the
+confusion matrix: `<output_dir>/eval/metrics_test.json`, `confusion_test.csv`.
+
+### External validation — OPTOPOL REVO clinic scans, 37 images
+
+| Metric | Value |
+|---|---|
+| Accuracy | **59.46%** |
+
+A ~37-point drop from the internal test set. The clinic scans come from a
+different device family (OPTOPOL REVO) than OCT-C8's source scanners, so this is
+a **domain-shift** finding, not a model-quality one. Only 4 of 8 classes appear
+in the clinic set (Drusen 22, Normal 9, DME 5, CNV 1). See
+[LIMITATIONS.md](LIMITATIONS.md).
+
+### CDS safety gap under domain shift
+
+The CDS layer should *abstain* ("refer to specialist") when the model is unsure
+rather than assert a wrong triage. It does on genuinely low-confidence cases —
+but **MSP-based confidence does not reliably flag confident-but-wrong
+predictions**, the dominant failure mode under domain shift:
+
+| Split | Misclassifications | Confident wrong triage | Deferred to specialist |
+|---|---|---|---|
+| Test (OCT-C8) | 99 | 63 | 36 |
+| External — Drusen only | 14 | 10 (7 triaged **`none`** / "no referral") | 4 |
+
+Seven misclassified clinic Drusen scans were confidently triaged as needing **no
+referral** — the worst direction for a screening aid. Proposed fix (Mahalanobis
+feature-space OOD detection) is a TODO — see [LIMITATIONS.md](LIMITATIONS.md).
+
+### Grad-CAM
+
+<!-- Add two overlay strips to docs/figures/ to populate these — see docs/figures/README.md -->
+![Misclassified clinic Drusen #1 — raw scan · predicted-class heatmap · true-class heatmap](docs/figures/gradcam_drusen_wrong_1.png)
+![Misclassified clinic Drusen #2 — raw scan · predicted-class heatmap · true-class heatmap](docs/figures/gradcam_drusen_wrong_2.png)
+
+Each panel is `[ raw B-scan | Grad-CAM for the predicted (wrong) class | Grad-CAM
+for the true Drusen class ]` on the model's 224 px input view. The two files above
+are copied from the run outputs — **[docs/figures/README.md](docs/figures/README.md)
+has the copy commands** (they render as broken links until you add them).
+Regenerate the source overlays with `python explain.py paths=<env>
+explain.split=external_test 'explain.classes=[Drusen]' explain.only_errors=true
+explain.target=both`.
+
 ## Layout
 
 ```
-configs/            Hydra configs (data/ model/ training/ preprocess/ cds/)
+configs/            Hydra configs (paths/ data/ model/ training/ preprocess/ cds/)
 data/metadata/      label_map.json + data dictionary (only tracked data files)
 src/oct_cds/
   data/             manifests, OPTOPOL filename parser, Dataset + DataModule, QC
   preprocessing/    deterministic transforms + train-only augmentation
-  models/           timm backbones, LightningModule, losses, temperature scaling
-  evaluation/       metrics (sens/spec, AUROC/AUPRC, QWK, ECE), bootstrap CIs
-  explainability/   Grad-CAM overlays for the report
-  cds/              schema, rule engine, OOD gate, guideline refs, report, audit
-train.py            Hydra training entrypoint
+  models/           timm backbones, LightningModule, losses, temp scaling, ckpt loading
+  evaluation/       metrics (sens/spec, AUROC/AUPRC, QWK, ECE), confusion, bootstrap CIs
+  explainability/   Grad-CAM runner + heatmap overlays
+  cds/              schema, rule engine, OOD gate, guideline refs, report, audit, batch summary
+train.py  eval.py  explain.py  cds.py    Hydra entrypoints (train → eval → explain → CDS)
+notebooks/demo.ipynb   end-to-end walkthrough of the finished pipeline
 tests/
 ```
 
@@ -122,6 +181,64 @@ python -m oct_cds.cli cds demo                      # single synthetic case
 ```bash
 pytest
 ```
+
+### Demo notebook
+
+[`notebooks/demo.ipynb`](notebooks/demo.ipynb) walks the finished pipeline —
+manifest summary, model architecture, test metrics + confusion matrix, external
+validation, Grad-CAM examples, CDS summary — by loading the artifacts the
+entrypoints above produce (no duplicated logic). Run the numbered steps first so
+the artifacts exist, then:
+
+```bash
+pip install -e ".[notebook,explain]"
+OCT_CDS_ENV=kaggle jupyter lab notebooks/demo.ipynb          # interactive; Run All
+
+# or render a shareable HTML (run from the repo root):
+OCT_CDS_ENV=kaggle jupyter nbconvert --to html --execute notebooks/demo.ipynb --output-dir docs/
+```
+
+It picks up `configs/paths/$OCT_CDS_ENV.yaml` (`kaggle` or `default`); each cell
+prints the command to run if its artifact is missing.
+
+## Reproducing this project
+
+**1. Get OCT-C8.** Download from Kaggle:
+<https://www.kaggle.com/datasets/obulisainaren/retinal-oct-c8>. You need the
+directory that contains `train/`, `val/`, `test/` (each with the 8 class folders
+`AMD CNV CSR DME DR DRUSEN MH NORMAL`).
+
+**2. The 37 clinic scans are not in this repo.** They are private, de-identified
+patient data (OPTOPOL REVO, single center) and are not redistributable. Every
+`external_test` / clinic step is optional — skip it and the internal-test
+pipeline runs end to end. The filename convention the parser expects is
+`{LABEL}[_{patient}]__{eye}.png` (`eye` ∈ `L`,`R`,`p0`); point
+`paths.clinic_optopol_raw_root` at a folder of such files to run external
+validation on your own data.
+
+**3. Pick the environment config.**
+
+| Where you run | Command suffix | Edit for your paths |
+|---|---|---|
+| Kaggle | `paths=kaggle` | `configs/paths/kaggle.yaml` |
+| Colab + Google Drive | `paths=default` | `configs/paths/default.yaml` |
+| Anywhere | `--set paths.oct_c8_raw_root=/abs/path` (CLI) / `paths.oct_c8_raw_root=/abs/path` (Hydra) | — |
+
+Then run the numbered steps above: `data build` → `train` → `eval` → `explain` →
+`cds`.
+
+**4. The trained checkpoint is not committed** (too large for git). Training the
+DenseNet-121 from scratch takes roughly 45 min–1.5 h on a single modern GPU and
+reproduces the reported numbers within noise (seed `1337`, deterministic).
+The exact `epoch 17` checkpoint and its `temperature.json` are available on
+request if you need the published results without retraining.
+
+## Limitations
+
+The external-validation and CDS findings have important caveats — small
+single-device external set, 4 of 8 classes never externally validated, CNV
+n = 1, the domain-shift result, and the MSP-confidence gap in the CDS layer.
+**Read [LIMITATIONS.md](LIMITATIONS.md) before citing any result.**
 
 ## Pipeline stages
 
