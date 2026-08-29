@@ -15,6 +15,13 @@ seed: 1337
 task_name: oct_c8_${model.name}
 output_dir: ${paths.output_dir}/${task_name}
 
+# used by eval.py
+eval:
+  ckpt_path: null          # null => auto-pick best-scoring ckpt under output_dir/checkpoints
+  split: test              # test | external_test | val
+  calibration: fit_val     # fit_val (refit temp on val) | load (temperature.json) | none
+  bootstrap: true
+
 # hydra run/output layout
 hydra:
   run:

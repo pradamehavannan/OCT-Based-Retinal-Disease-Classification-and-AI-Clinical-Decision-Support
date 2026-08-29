@@ -41,26 +41,48 @@ def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: in
     return float(ece)
 
 
+def confusion_matrix_dict(y_true, y_pred, class_names: list[str]) -> dict:
+    """Row = true class, column = predicted class. Also row-normalised (recall)."""
+    from sklearn.metrics import confusion_matrix
+
+    k = len(class_names)
+    cm = confusion_matrix(np.asarray(y_true), np.asarray(y_pred), labels=list(range(k)))
+    row_sums = cm.sum(axis=1, keepdims=True).clip(min=1)
+    return {
+        "labels": list(class_names),
+        "matrix": cm.tolist(),
+        "row_normalized": np.round(cm / row_sums, 4).tolist(),
+    }
+
+
 def classification_report_dict(
     y_true, y_pred, probs=None, class_names: list[str] | None = None
 ) -> dict:
     from sklearn.metrics import (
+        average_precision_score,
         cohen_kappa_score,
         f1_score,
+        precision_score,
         roc_auc_score,
-        average_precision_score,
     )
 
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
-    k = int(max(y_true.max(), y_pred.max())) + 1 if len(y_true) else 0
+    k = len(class_names) if class_names else (
+        int(max(y_true.max(), y_pred.max())) + 1 if len(y_true) else 0
+    )
     names = class_names or [str(i) for i in range(k)]
 
     sens, spec = sensitivity_specificity(y_true, y_pred, k)
+    f1_per = f1_score(y_true, y_pred, labels=list(range(k)), average=None, zero_division=0)
+    prec_per = precision_score(y_true, y_pred, labels=list(range(k)), average=None, zero_division=0)
+
     report = {
         "n": int(len(y_true)),
         "accuracy": float((y_true == y_pred).mean()) if len(y_true) else float("nan"),
+        "balanced_accuracy": float(np.nanmean([sens[c] for c in range(k)])),
         "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+        "weighted_f1": float(f1_score(y_true, y_pred, average="weighted", zero_division=0)),
         "quadratic_weighted_kappa": float(
             cohen_kappa_score(y_true, y_pred, weights="quadratic")
         )
@@ -68,8 +90,10 @@ def classification_report_dict(
         else float("nan"),
         "per_class": {
             names[c]: {
-                "sensitivity": sens[c],
-                "specificity": spec[c],
+                "sensitivity": sens[c],       # recall / TPR
+                "specificity": spec[c],       # TNR
+                "precision": float(prec_per[c]),
+                "f1": float(f1_per[c]),
                 "support": int(np.sum(y_true == c)),
             }
             for c in range(k)
@@ -90,6 +114,16 @@ def classification_report_dict(
         except ValueError:
             report["auroc_macro"] = float("nan")
             report["auprc_macro"] = float("nan")
+
+        for c in range(k):
+            entry = report["per_class"][names[c]]
+            if oh[:, c].any() and not oh[:, c].all():
+                entry["auroc"] = float(roc_auc_score(oh[:, c], probs[:, c]))
+                entry["auprc"] = float(average_precision_score(oh[:, c], probs[:, c]))
+            else:
+                entry["auroc"] = float("nan")
+                entry["auprc"] = float("nan")
+
         report["ece"] = expected_calibration_error(probs, y_true)
 
     return report

@@ -77,6 +77,18 @@ python train.py model=efficientnet_b3 training.max_epochs=40   # default env
 > `!python train.py` so the cell doesn't hang on lingering DataLoader workers.
 
 ```bash
+# 3. evaluate on the held-out test set (auto-picks the best checkpoint under
+#    <output_dir>/checkpoints, refits temperature scaling on val)
+python eval.py paths=kaggle
+python eval.py paths=kaggle eval.split=external_test          # the 37 OPTOPOL scans
+python eval.py paths=kaggle eval.ckpt_path=/path/to/some.ckpt eval.calibration=load
+```
+> Writes `<output_dir>/eval/metrics_<split>.json` + `confusion_<split>.csv` and
+> prints accuracy, macro/weighted/balanced F1, per-class sensitivity / specificity
+> / precision / F1 / AUROC / AUPRC, macro AUROC/AUPRC, quadratic-weighted kappa,
+> the confusion matrix, and ECE **before and after** temperature scaling.
+
+```bash
 # 4. see the CDS rule engine on a synthetic case
 python -m oct_cds.cli cds demo
 ```

@@ -69,7 +69,9 @@ def main(cfg: DictConfig) -> float:
     ckpt_dir = Path(cfg.output_dir) / "checkpoints"
     ckpt = ModelCheckpoint(
         dirpath=ckpt_dir,
-        filename="{epoch}-{val/macro_f1:.4f}",
+        # no '/' in the filename -> avoids a spurious "val/" subdirectory
+        filename="epoch{epoch:02d}-valf1{val/macro_f1:.4f}",
+        auto_insert_metric_name=False,
         monitor=ckpt_cfg.get("monitor", "val/macro_f1"),
         mode=ckpt_cfg.get("mode", "max"),
         save_top_k=int(ckpt_cfg.get("save_top_k", 2)),
@@ -119,9 +121,16 @@ def main(cfg: DictConfig) -> float:
         best_f1 = float(ckpt.best_model_score) if ckpt.best_model_score is not None else 0.0
         log.info("best val/macro_f1 = %.4f (%s)", best_f1, ckpt.best_model_path)
 
-        # post-fit calibration on val
+        # post-fit calibration on val — fit temperature on the BEST checkpoint,
+        # not the last-epoch weights still in memory.
         if train_cfg.get("calibrate_after_fit"):
-            _calibrate(model, dm, cfg)
+            cal_model = model
+            if ckpt.best_model_path and Path(ckpt.best_model_path).exists():
+                cal_model = OCTClassifier.load_from_checkpoint(
+                    ckpt.best_model_path, map_location="cpu",
+                    model_cfg=model_cfg, training_cfg=train_cfg,
+                ).to(next(model.parameters()).device)
+            _calibrate(cal_model, dm, cfg)
     finally:
         _teardown(trainer, dm, model)
 

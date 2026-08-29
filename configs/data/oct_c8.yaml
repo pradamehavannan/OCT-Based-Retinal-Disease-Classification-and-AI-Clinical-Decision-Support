@@ -49,6 +49,9 @@ manifest:
   train: ${paths.data_dir}/processed/train.csv
   val:   ${paths.data_dir}/processed/val.csv
   test:  ${paths.data_dir}/processed/test.csv
+  # built from clinic_optopol.yaml; listed here so `eval.py eval.split=external_test`
+  # can load it against the OCT-C8-trained model.
+  external_test: ${paths.data_dir}/processed/external_clinic_optopol.csv
   # OCT-C8 has no patient/eye IDs. Treat each image as its own group; there is
   # no cross-split leakage because the authors' split is fixed and disjoint.
   patient_id_strategy: per_image      # patient_id := image stem
