@@ -54,12 +54,14 @@ def main(cfg: DictConfig) -> float:
     dm.setup("fit")
     model = OCTClassifier(model_cfg, train_cfg, class_weights=class_weights)
 
-    import lightning.pytorch as pl
-    from lightning.pytorch.callbacks import (
+    from oct_cds.common.lightning_compat import (
         EarlyStopping,
         LearningRateMonitor,
         ModelCheckpoint,
+        require_lightning,
     )
+
+    pl = require_lightning()
 
     ckpt_cfg = train_cfg.get("checkpoint", {})
     es_cfg = train_cfg.get("early_stopping", {})

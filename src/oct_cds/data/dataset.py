@@ -50,8 +50,9 @@ class OCTManifestDataset(Dataset):
 class OCTDataModule:
     """Framework-agnostic wrapper; exposes the dataloaders Lightning expects.
 
-    Subclasses ``lightning.pytorch.LightningDataModule`` at runtime if available,
-    but importable without lightning for tests.
+    Subclasses ``LightningDataModule`` at runtime if available (either the
+    ``lightning`` or ``pytorch_lightning`` distribution), but importable without
+    either for tests.
     """
 
     def __init__(self, data_cfg: Any, preprocess_cfg: Any, training_cfg: Any):
@@ -106,9 +107,9 @@ class OCTDataModule:
 
 def make_datamodule(data_cfg, preprocess_cfg, training_cfg) -> OCTDataModule:
     """Return an ``OCTDataModule`` that also is-a LightningDataModule when possible."""
-    try:
-        import lightning.pytorch as pl
-    except ImportError:  # pragma: no cover
+    from oct_cds.common.lightning_compat import HAS_LIGHTNING, pl
+
+    if not HAS_LIGHTNING:  # pragma: no cover
         return OCTDataModule(data_cfg, preprocess_cfg, training_cfg)
 
     class _LitDataModule(OCTDataModule, pl.LightningDataModule):

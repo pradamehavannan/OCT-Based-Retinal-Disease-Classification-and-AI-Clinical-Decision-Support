@@ -13,12 +13,11 @@ from oct_cds.models.backbones import (
 from oct_cds.models.losses import build_loss
 
 
-try:  # allow `import` without lightning for lightweight tests
-    import lightning.pytorch as _pl
+# allow `import` without lightning for lightweight tests (either the
+# `lightning` or `pytorch_lightning` distribution works)
+from oct_cds.common.lightning_compat import pl as _pl
 
-    _Base = _pl.LightningModule
-except Exception:  # pragma: no cover
-    _Base = object
+_Base = _pl.LightningModule if _pl is not None else object
 
 
 class OCTClassifier(_Base):
