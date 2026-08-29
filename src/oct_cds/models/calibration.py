@@ -37,7 +37,9 @@ class TemperatureScaler:
 
     # -- io -----------------------------------------------------------
     def save(self, path: str | Path):
-        Path(path).write_text(f'{{"temperature": {self.temperature}}}', encoding="utf-8")
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(f'{{"temperature": {self.temperature}}}', encoding="utf-8")
 
     @classmethod
     def load(cls, path: str | Path) -> "TemperatureScaler":

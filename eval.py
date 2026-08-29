@@ -107,6 +107,7 @@ def main(cfg: DictConfig) -> None:
 
     split = cfg.eval.get("split", "test")
     out_dir = Path(cfg.output_dir) / "eval"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     ckpt_path = cfg.eval.get("ckpt_path")
     ckpt_path = Path(ckpt_path) if ckpt_path else _find_best_ckpt(
