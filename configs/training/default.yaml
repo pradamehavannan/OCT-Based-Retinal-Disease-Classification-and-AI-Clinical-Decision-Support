@@ -1,5 +1,8 @@
 batch_size: 32
-num_workers: 4
+num_workers: 2             # Colab has ~2 vCPUs; >2 warns and slows worker startup
+persistent_workers: false  # keep workers between epochs? false => clean teardown
+prefetch_factor: 2
+loader_timeout: 120        # seconds a batch may block a worker before erroring (0 = disabled)
 max_epochs: 30
 freeze_epochs: 3            # backbone frozen for this many epochs (warmup the head)
 

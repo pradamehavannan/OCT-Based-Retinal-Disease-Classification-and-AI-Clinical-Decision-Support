@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
@@ -82,27 +83,36 @@ class OCTDataModule:
         log.info("datamodule splits: %s", {k: len(v) for k, v in self._sets.items()})
 
     # -- loaders --------------------------------------------------------
-    def _loader(self, split: str, shuffle: bool) -> DataLoader:
-        return DataLoader(
-            self._sets[split],
+    def _loader(self, split: str, shuffle: bool, num_workers: int | None = None) -> DataLoader:
+        nw = int(self.train_cfg["num_workers"] if num_workers is None else num_workers)
+        kwargs: dict[str, Any] = dict(
             batch_size=int(self.train_cfg["batch_size"]),
             shuffle=shuffle,
-            num_workers=int(self.train_cfg["num_workers"]),
-            pin_memory=True,
+            num_workers=nw,
+            pin_memory=torch.cuda.is_available(),
             drop_last=shuffle,
         )
+        if nw > 0:
+            # persistent_workers=False => workers are torn down at the end of each
+            # iteration, so the process can exit cleanly after training.
+            kwargs["persistent_workers"] = bool(self.train_cfg.get("persistent_workers", False))
+            kwargs["prefetch_factor"] = int(self.train_cfg.get("prefetch_factor", 2))
+            timeout = int(self.train_cfg.get("loader_timeout", 0))
+            if timeout > 0:
+                kwargs["timeout"] = timeout
+        return DataLoader(self._sets[split], **kwargs)
 
     def train_dataloader(self) -> DataLoader:
         return self._loader("train", shuffle=True)
 
-    def val_dataloader(self) -> DataLoader:
-        return self._loader("val", shuffle=False)
+    def val_dataloader(self, num_workers: int | None = None) -> DataLoader:
+        return self._loader("val", shuffle=False, num_workers=num_workers)
 
-    def test_dataloader(self) -> DataLoader:
-        return self._loader("test", shuffle=False)
+    def test_dataloader(self, num_workers: int | None = None) -> DataLoader:
+        return self._loader("test", shuffle=False, num_workers=num_workers)
 
-    def external_dataloader(self) -> DataLoader:
-        return self._loader("external_test", shuffle=False)
+    def external_dataloader(self, num_workers: int | None = None) -> DataLoader:
+        return self._loader("external_test", shuffle=False, num_workers=num_workers)
 
 
 def make_datamodule(data_cfg, preprocess_cfg, training_cfg) -> OCTDataModule:

@@ -10,6 +10,7 @@ Requires manifests to exist:  python -m oct_cds.cli data build
 
 from __future__ import annotations
 
+import gc
 import sys
 from pathlib import Path
 
@@ -91,14 +92,19 @@ def main(cfg: DictConfig) -> float:
         default_root_dir=cfg.output_dir,
         callbacks=callbacks,
     )
-    trainer.fit(model, dm.train_dataloader(), dm.val_dataloader())
 
-    best_f1 = float(ckpt.best_model_score) if ckpt.best_model_score is not None else 0.0
-    log.info("best val/macro_f1 = %.4f (%s)", best_f1, ckpt.best_model_path)
+    best_f1 = 0.0
+    try:
+        trainer.fit(model, dm.train_dataloader(), dm.val_dataloader())
 
-    # post-fit calibration on val
-    if train_cfg.get("calibrate_after_fit"):
-        _calibrate(model, dm, cfg)
+        best_f1 = float(ckpt.best_model_score) if ckpt.best_model_score is not None else 0.0
+        log.info("best val/macro_f1 = %.4f (%s)", best_f1, ckpt.best_model_path)
+
+        # post-fit calibration on val
+        if train_cfg.get("calibrate_after_fit"):
+            _calibrate(model, dm, cfg)
+    finally:
+        _teardown(trainer, dm, model)
 
     return best_f1
 
@@ -108,12 +114,19 @@ def _calibrate(model, dm, cfg) -> None:
 
     from oct_cds.models.calibration import TemperatureScaler
 
+    device = next(model.parameters()).device
     model.eval()
+    # num_workers=0: a single short pass over val — no worker processes to leak.
+    loader = dm.val_dataloader(num_workers=0)
     logits, labels = [], []
-    with torch.no_grad():
-        for batch in dm.val_dataloader():
-            logits.append(model(batch["image"]))
-            labels.append(batch["label"])
+    try:
+        with torch.no_grad():
+            for batch in loader:
+                logits.append(model(batch["image"].to(device)).cpu())
+                labels.append(batch["label"])
+    finally:
+        del loader
+
     scaler = TemperatureScaler().fit(torch.cat(logits), torch.cat(labels))
     dest = Path(cfg.output_dir) / "calibrators" / "temperature.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -121,5 +134,43 @@ def _calibrate(model, dm, cfg) -> None:
     log.info("fitted temperature = %.3f -> %s", scaler.temperature, dest)
 
 
+def _teardown(*objs) -> None:
+    """Drop big objects and reap DataLoader workers / free VRAM so the process
+    (and the Colab cell) exits promptly instead of hanging."""
+    for o in objs:
+        try:
+            if hasattr(o, "_sets"):      # DataModule: drop dataset refs
+                o._sets.clear()
+        except Exception:  # noqa: BLE001
+            pass
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _running_under_ipython() -> bool:
+    try:
+        from IPython import get_ipython
+
+        return get_ipython() is not None
+    except Exception:  # noqa: BLE001
+        return False
+
+
 if __name__ == "__main__":
     main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    gc.collect()
+    # As a standalone process, hard-exit so lingering non-daemon threads from
+    # Hydra/Lightning/DataLoader can't keep the `!python train.py` cell spinning.
+    # Skip this when run via `%run` inside a kernel (it would kill the kernel).
+    if not _running_under_ipython():
+        import os
+
+        os._exit(0)
