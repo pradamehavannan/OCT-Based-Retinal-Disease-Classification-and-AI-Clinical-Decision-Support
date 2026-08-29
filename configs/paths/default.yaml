@@ -12,5 +12,6 @@ report_dir: ${paths.root_dir}/reports
 #
 # Colab + Google Drive (current setup):
 oct_c8_raw_root: /content/drive/MyDrive/oct_data/RetinalOCT_Dataset/RetinalOCT_Dataset
-# Local default would be: ${paths.data_dir}/raw/oct_c8
-clinic_optopol_raw_root: ${paths.data_dir}/external/clinic_optopol
+clinic_optopol_raw_root: /content/drive/MyDrive/bscans
+# Local defaults would be: ${paths.data_dir}/raw/oct_c8  and
+#                          ${paths.data_dir}/external/clinic_optopol
