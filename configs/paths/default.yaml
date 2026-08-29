@@ -1,0 +1,8 @@
+# All paths resolve relative to the repo root (Hydra changes CWD, so we anchor
+# on this file's known location via ${hydra:runtime.cwd}).
+root_dir: ${hydra:runtime.cwd}
+data_dir: ${paths.root_dir}/data
+config_dir: ${paths.root_dir}/configs
+output_dir: ${paths.root_dir}/outputs
+model_dir: ${paths.root_dir}/models
+report_dir: ${paths.root_dir}/reports
