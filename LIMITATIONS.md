@@ -74,6 +74,14 @@ referral** — the worst-case direction for a screening aid. Under domain shift 
 model is often *confidently* wrong: max softmax stays high, margin stays wide,
 MSP stays low, so neither the abstention rule nor the MSP OOD gate fires.
 
+Grad-CAM review of the Drusen misclassifications makes the mechanism concrete: in
+3 of 4 reviewed pairs the model **localises the pathological region correctly but
+misclassifies what it represents** (8 of 14 misclassified Drusen scans were
+called `Normal`). The error is *semantic*, not spatial — so a saliency-overlap or
+"is it looking at the retina?" check would not catch it either. What fails is the
+model's mapping from a correctly-attended region to a label, which is exactly
+what a feature-space distance measures.
+
 ### Proposed fix (TODO)
 
 Replace / augment MSP with a **feature-space out-of-distribution detector** —

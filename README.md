@@ -65,19 +65,29 @@ Seven misclassified clinic Drusen scans were confidently triaged as needing **no
 referral** — the worst direction for a screening aid. Proposed fix (Mahalanobis
 feature-space OOD detection) is a TODO — see [LIMITATIONS.md](LIMITATIONS.md).
 
-### Grad-CAM
+### Grad-CAM — misclassified clinic Drusen
 
 <!-- Add two overlay strips to docs/figures/ to populate these — see docs/figures/README.md -->
-![Misclassified clinic Drusen #1 — raw scan · predicted-class heatmap · true-class heatmap](docs/figures/gradcam_drusen_wrong_1.png)
-![Misclassified clinic Drusen #2 — raw scan · predicted-class heatmap · true-class heatmap](docs/figures/gradcam_drusen_wrong_2.png)
+![DRUSEN_3__L — raw scan · Grad-CAM for predicted class (Normal, 0.88) · Grad-CAM for true class (Drusen)](docs/figures/gradcam_drusen_wrong_1.png)
+![DRUSEN_4__L — raw scan · Grad-CAM for predicted class (CSR, 0.54) · Grad-CAM for true class (Drusen)](docs/figures/gradcam_drusen_wrong_2.png)
 
 Each panel is `[ raw B-scan | Grad-CAM for the predicted (wrong) class | Grad-CAM
-for the true Drusen class ]` on the model's 224 px input view. The two files above
-are copied from the run outputs — **[docs/figures/README.md](docs/figures/README.md)
-has the copy commands** (they render as broken links until you add them).
-Regenerate the source overlays with `python explain.py paths=<env>
-explain.split=external_test 'explain.classes=[Drusen]' explain.only_errors=true
-explain.target=both`.
+for the true Drusen class ]` on the model's 224 px input view.
+
+**Finding: correct localisation, wrong classification.** Across the 4 Drusen
+misclassification pairs reviewed, 3 of 4 show the predicted- and true-class
+heatmaps landing in nearly the **same** region — the model finds the
+pathological area but misreads what it represents (8 of 14 misclassified Drusen
+scans were called `Normal`). Only one case (`DRUSEN_9__L` → DME) showed genuinely
+divergent attention. The failure is semantic, not spatial, so a saliency-overlap
+check would not flag it — reinforcing the case for feature-space OOD detection in
+the CDS layer ([LIMITATIONS.md](LIMITATIONS.md)).
+
+The two files above are copied from the run outputs —
+**[docs/figures/README.md](docs/figures/README.md) has the selection criteria and
+copy commands** (the links render broken until you add the PNGs). Regenerate the
+source overlays with `python explain.py paths=<env> explain.split=external_test
+'explain.classes=[Drusen]' explain.only_errors=true explain.target=both`.
 
 ## Layout
 
