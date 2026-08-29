@@ -45,6 +45,8 @@ class OCTManifestDataset(Dataset):
             "image_path": row["image_path"],
             "patient_id": row["patient_id"],
             "dataset": row["dataset"],
+            "eye": str(row.get("eye", "unknown")),
+            "source": str(row.get("source", "")),
         }
 
 

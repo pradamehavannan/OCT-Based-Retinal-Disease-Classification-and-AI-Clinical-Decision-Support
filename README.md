@@ -104,9 +104,20 @@ python explain.py paths=kaggle explain.split=external_test \
 > the drusen.
 
 ```bash
-# 5. see the CDS rule engine on a synthetic case
-python -m oct_cds.cli cds demo
+# 5. CDS layer — run calibrated predictions through the rules/urgency/abstention
+python cds.py paths=kaggle                          # OCT-C8 test set
+python cds.py paths=kaggle cds_run.split=external_test   # the 37 clinic scans
+python cds.py paths=kaggle cds_run.split=external_test cds_run.write_reports_for=all
+python -m oct_cds.cli cds demo                      # single synthetic case
 ```
+> Writes to `<output_dir>/cds/`: `recommendations_<split>.csv` (per-image: probs,
+> ood score, abstained / ood_rejected, urgency, recommendation text),
+> `summary_<split>.json`, `reports/<split>/<stem>.{txt,json}` (full narratives for
+> `write_reports_for`), and `audit_<split>.jsonl`. The summary's headline number:
+> **on the images the model got wrong, how many did CDS defer to a specialist
+> (good) vs assert a confident wrong urgency (bad)** — broken down by true class,
+> so you can read off exactly how the misclassified Drusen cases were triaged.
+> Tune thresholds on the CLI: `cds.min_confidence=0.75 cds.min_margin=0.20`.
 
 ```bash
 pytest
