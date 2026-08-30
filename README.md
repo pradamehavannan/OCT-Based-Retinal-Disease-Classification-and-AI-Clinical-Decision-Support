@@ -239,9 +239,13 @@ Then run the numbered steps above: `data build` → `train` → `eval` → `expl
 
 **4. The trained checkpoint is not committed** (too large for git). Training the
 DenseNet-121 from scratch takes roughly 45 min–1.5 h on a single modern GPU and
-reproduces the reported numbers within noise (seed `1337`, deterministic).
-The exact `epoch 17` checkpoint and its `temperature.json` are available on
-request if you need the published results without retraining.
+reproduces the reported numbers within noise (seed `1337`, deterministic). To
+skip retraining, download the exact `epoch 17` checkpoint
+(`val/macro_f1 = 0.9236`) and its `temperature.json` from Google Drive:
+<https://drive.google.com/drive/folders/1cS7Ov0uZ9UO3BmqBX8oMVVeQzKBOvIuN?usp=sharing>
+and place them under `<output_dir>/checkpoints/` and `<output_dir>/calibrators/`
+respectively (`eval.py` / `explain.py` / `cds.py` auto-pick the checkpoint from
+there).
 
 ## Limitations
 
