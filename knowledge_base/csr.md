@@ -4,7 +4,6 @@ title: Central Serous Retinopathy
 kb_version: 1
 sources:
   - "Varghese J, Kesharwani D, Parashar S, Agrawal P. A Review of Central Serous Chorioretinopathy: Clinical Presentation and Management. Cureus. 2022. (open access, CC-BY)"
-  - "Fung AT, et al. Central serous chorioretinopathy: A review. Clinical & Experimental Ophthalmology. 2023."
 ---
 
 ## Overview

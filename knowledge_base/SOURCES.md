@@ -11,23 +11,16 @@ systems without permission.
 | `dme.md` | DME | NEI — Macular Edema (nei.nih.gov) | U.S. federal government work — public domain |
 | `dr.md` | DR | NEI — Diabetic Retinopathy (nei.nih.gov) | U.S. federal government work — public domain |
 | `macular_hole.md` | Macular Hole | NEI — Macular Hole (nei.nih.gov) | U.S. federal government work — public domain |
-| `csr.md` | CSR | Varghese et al., Cureus 2022; Fung et al., Clin Exp Ophthalmol 2023 | CC-BY (Cureus) — open access, permits derivatives |
+| `csr.md` | CSR | Varghese et al., Cureus 2022 | CC-BY (Cureus) — open access, permits derivatives |
 
 Every pathology class (AMD, CNV, CSR, DME, DR, Drusen, Macular Hole) appears in
 exactly one entry. `Normal` has no entry — a `Normal` prediction skips the RAG
 narrator entirely.
-
-## Open item
-
-- **`csr.md` — Fung AT et al. (Clinical & Experimental Ophthalmology, 2023).**
-  This journal is not open-access by default. Confirm this specific article is
-  CC-BY / open-access; if it is not, remove it from `csr.md`'s `sources` (the
-  Cureus review already covers the same ground under CC-BY).
 
 ## Licence check
 
 - [x] No AAO Preferred Practice Pattern material
 - [x] No EyeWiki material
 - [x] No StatPearls (CC-BY-NC-ND — no derivatives)
-- [ ] Every non-NEI source is CC-BY or CC-BY-SA  ← pending the Fung et al. check above
+- [x] Every non-NEI source is CC-BY or CC-BY-SA
 - [x] All text paraphrased, nothing verbatim
