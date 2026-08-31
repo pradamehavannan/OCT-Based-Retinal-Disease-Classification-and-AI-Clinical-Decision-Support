@@ -157,6 +157,19 @@ the CDS layer did not flag them as uncertain:
 - **7 of the 14 misclassified Drusen cases were confidently triaged as "no
   referral."**
 
+The same pattern appears in-distribution and worsens under domain shift — for
+each misclassification, whether CDS deferred it to a specialist (the safe
+outcome) or asserted a confident wrong triage:
+
+| Split | Misclassifications | Confident wrong triage | Deferred to specialist |
+|---|---|---|---|
+| Test (OCT-C8) | 99 | 63 | 36 |
+| External — Drusen only | 14 | 10 (7 → `none`) | 4 |
+
+Even on the in-distribution test set, MSP-based confidence lets roughly two
+thirds of errors through as confident triage calls; on the domain-shifted clinic
+Drusen scans it is worse still.
+
 This is more concerning than a simple classification error, because the model was
 not merely wrong — it was wrong with enough apparent confidence to influence the
 downstream decision-support output. The underlying issue is not a poorly tuned
