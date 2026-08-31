@@ -151,8 +151,43 @@ Model Behavior Note passages as past validation rather than statements about the
 patient, and left the fixed impression and triage untouched. The local 3B model
 was sufficient; the Anthropic backend was not needed.
 
-<!-- WORKED EXAMPLE — paste one verified narrative + its citations here.
-     (e.g. the CNV case: impression, triage, narrative_rag, citations list) -->
+### Worked example — `CNV__p0.png` (real OPTOPOL REVO clinic scan)
+
+**Part 1 decision (frozen, passed through unchanged):**
+
+| | |
+|---|---|
+| Impression | **CNV**, 97.68% calibrated confidence |
+| Triage | **urgent** — "Expedite specialist referral (24–72h)" |
+
+**Generated narrative** (`narrative_rag`, verbatim — citations shown inline):
+
+> The OCT scan shows choroidal neovascularization (CNV), a condition characterized
+> by the growth of abnormal blood vessels beneath the retina, which can lead to
+> rapid vision loss `[cnv#overview]`. This finding aligns with the model behavior
+> note indicating strong performance on CNV classification with 93.4% sensitivity
+> and 88.1% precision `[cnv#model-behavior-note]`, though the external validation
+> sample size was limited to just one case `[cnv#model-behavior-note]`. Given the
+> high model confidence (98%) and the differential diagnosis suggesting CNV at
+> 98%, central serous retinopathy (CSR) at 1%, and drusen at 0%, urgent referral
+> is recommended due to the active, vision-threatening nature of CNV
+> `[cnv#referral]`. Specialist review is reasonable given the narrow window for
+> effective treatment and the significant symptoms such as central blurry vision
+> and wavy lines `[cnv#symptoms]`.
+
+**Citations** — 4, all resolved against `knowledge_base/cnv.md`, all NEI (public
+domain): `cnv#overview`, `cnv#model-behavior-note`, `cnv#referral`, `cnv#symptoms`.
+
+**Verification:** `verified: true`, `fallback_used: false`, `flags: []` — passed
+on the first attempt, no citation retry needed. (Three of the 15 verified cases
+did need the one-shot retry to add citations to otherwise-sound text; none
+required more than one.)
+
+Note that the narrative restates the urgency ("urgent referral is recommended")
+by citing `cnv#referral`, which describes CNV in general as warranting urgent
+referral. This is consistent with — not a substitute for — Part 1's fixed
+`urgent` triage; `verify.py` only rejects a narrative that *contradicts* the
+fixed decision (asserts a different class, or downgrades the urgency).
 
 ## 5. Running Part 2
 
