@@ -116,8 +116,8 @@ def make_backend(cfg: dict[str, Any]) -> LLMBackend:
             dtype=cfg.get("dtype", "auto"),
         )
     if kind == "anthropic":
-        return AnthropicBackend(
-            model=cfg.get("model", "claude-sonnet-5"),
-            api_key_env=cfg.get("api_key_env", "ANTHROPIC_API_KEY"),
-        )
+        model = cfg.get("model", "")
+        if not model or "/" in model:      # a HF-style id left over from hf_local
+            model = cfg.get("anthropic_model", "claude-sonnet-5")
+        return AnthropicBackend(model=model, api_key_env=cfg.get("api_key_env", "ANTHROPIC_API_KEY"))
     raise ValueError(f"unknown rag.llm.backend: {kind!r}")

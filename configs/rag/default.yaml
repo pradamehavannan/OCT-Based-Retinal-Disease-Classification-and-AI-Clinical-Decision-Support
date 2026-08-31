@@ -10,10 +10,11 @@ retrieve:
 
 llm:
   backend: hf_local                  # stub | hf_local | anthropic
-  model: Qwen/Qwen2.5-3B-Instruct
+  model: Qwen/Qwen2.5-3B-Instruct    # hf_local model id
   device: null                       # null -> cuda if available else cpu
   dtype: auto
-  api_key_env: ANTHROPIC_API_KEY     # used only when backend=anthropic
+  anthropic_model: claude-sonnet-5   # used when backend=anthropic (override to a pinned id)
+  api_key_env: ANTHROPIC_API_KEY
   max_tokens: 400
   temperature: 0.0                   # deterministic
 
