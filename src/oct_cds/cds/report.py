@@ -71,6 +71,7 @@ def _attach_rag_narrative(report, narrator, rec, case) -> dict[str, Any]:
         "model": gn.model,
         "kb_version": gn.kb_version,
         "retrieved_ids": gn.retrieved_ids,
+        "raw_text": gn.raw_text,          # the LLM's unedited output (for inspection)
     }
     if gn.verified and not gn.fallback_used:
         report["narrative_rag"] = gn.text

@@ -167,6 +167,31 @@ def main(cfg: DictConfig) -> None:
         "checkpoint": str(ckpt),
     }
     (out_dir / f"summary_{split}.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+    # readable dump of every rejected / flagged raw narrative, for prompt debugging
+    rejected = [
+        r for r in reports
+        if r.get("narrator_meta", {}).get("fallback_used")
+        or r.get("narrator_meta", {}).get("flags")
+    ]
+    if rejected:
+        blocks = []
+        for r in rejected:
+            m = r["narrator_meta"]
+            blocks.append(
+                f"### {r['case']['image_path']}\n"
+                f"true={r.get('true_class')}  pred={r['impression']['predicted_class']}  "
+                f"urgency={r['triage']['urgency']}\n"
+                f"flags: {m['flags']}\n"
+                f"retrieved: {m['retrieved_ids']}\n"
+                f"--- raw LLM output ---\n{m.get('raw_text', '') or '(empty)'}\n"
+            )
+        (out_dir / f"rejected_{split}.txt").write_text("\n\n".join(blocks), encoding="utf-8")
+        log.info("wrote %d rejected/flagged raw narratives -> %s",
+                 len(rejected), out_dir / f"rejected_{split}.txt")
+        log.info("first rejected raw output:\n%s",
+                 (rejected[0]["narrator_meta"].get("raw_text") or "(empty)")[:800])
+
     log.info("── RAG narrate · %s ──", split)
     log.info("outcomes: %s", dict(outcomes))
     log.info("flags: %s", summary["flag_counts"])

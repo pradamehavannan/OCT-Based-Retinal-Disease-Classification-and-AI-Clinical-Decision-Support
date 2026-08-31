@@ -84,17 +84,17 @@ class Narrator:
         if vr.hard_fail:
             log.warning("narrative rejected (%s) -> Part 1 fallback", vr.flags)
             gn = GroundedNarrative(
-                text="", citations=[], verified=False, flags=vr.flags,
+                text="", raw_text=raw.strip(), verified=False, flags=vr.flags,
                 fallback_used=True, model=model_id, kb_version=kb_version,
                 retrieved_ids=retrieved_ids,
             )
             self.cache.put(key, gn.model_dump())
             return NarratorResult(True, gn)
 
-        citations = self._citations(vr.cited_ids)
         gn = GroundedNarrative(
             text=raw.strip(),
-            citations=citations,
+            raw_text=raw.strip(),
+            citations=self._citations(vr.cited_ids),
             verified=True,
             flags=vr.flags,
             fallback_used=False,

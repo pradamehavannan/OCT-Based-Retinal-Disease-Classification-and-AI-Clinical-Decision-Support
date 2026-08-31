@@ -34,9 +34,10 @@ class RetrievedPassage(BaseModel):
 class GroundedNarrative(BaseModel):
     """The verified output the report embeds."""
 
-    text: str
-    citations: list[dict]        # [{id, label, sources, snippet}]
-    verified: bool
+    text: str                    # "" when rejected (see raw_text)
+    raw_text: str = ""           # the LLM's unedited output — kept for inspection
+    citations: list[dict] = Field(default_factory=list)   # [{id, label, sources, snippet}]
+    verified: bool = False
     flags: list[str] = Field(default_factory=list)
     fallback_used: bool = False
     model: str = ""

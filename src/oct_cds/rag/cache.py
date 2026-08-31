@@ -10,7 +10,7 @@ from pathlib import Path
 from oct_cds.common.paths import REPO_ROOT
 from oct_cds.cds.schema import Recommendation
 
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2   # bump to invalidate the on-disk cache (prompt / capture changes)
 _DEFAULT_DIR = REPO_ROOT / "knowledge_base" / ".cache"
 
 
