@@ -1,41 +1,51 @@
 ---
-id: <slug>                       # unique, lowercase, [a-z0-9-]; e.g. "amd", "macular-hole"
 title: <Human-readable disease name>
-covers: [<ClassKey>, ...]        # exact Part 1 class keys, e.g. [AMD, Drusen, CNV]
+covers: [<ClassKey>, ...]        # exact Part 1 class keys, e.g. [AMD, Drusen]
                                  # valid keys: AMD CNV CSR DME DR Drusen "Macular Hole"
                                  # NOT "Normal". Use [] for a general reference entry.
 kb_version: 1                    # bump when the content changes
-sources:
-  - name: "National Eye Institute — <page title>"
-    url: "https://www.nei.nih.gov/..."
-    licence: "public-domain (U.S. federal)"
-  - name: "<Author> et al. (<year>). <Title>. <Journal>. doi:<doi>"
-    url: "https://doi.org/<doi>"
-    licence: "CC-BY-4.0"          # must permit derivative works
+sources:                         # list of citation strings (a NEI page, a CC-BY article)
+  - "National Eye Institute — <page title>, nei.nih.gov, last updated <date>"
+  - "<Author> et al. (<year>). <Title>. <Journal>. (open access, CC-BY)"
 ---
 
 <!--
-  Paraphrased / summarised only — never copied verbatim.
-  One self-contained thought per `##` section; the heading is the citation label.
-  Keep each section ~60–150 words.
+  - id is the filename stem (amd.md -> "amd"); no `id:` field needed.
+  - Paraphrased / summarised only — never copied verbatim.
+  - Sources: NEI (public domain) or CC-BY / CC-BY-SA only. No AAO PPP, no
+    EyeWiki, no StatPearls (CC-BY-NC-ND).
+  - One self-contained thought per `##` section; the heading is the citation
+    label. Keep each section ~60-150 words.
+  - Section titles are flexible. The set below matches the existing entries.
 -->
 
 ## Overview
 
-<What the condition is, who it affects, how it presents. Plain clinical language.>
+<What the condition is, who it affects, how it presents. Plain clinical language.
+If the source supports it, a sentence on the OCT appearance here helps the
+narrator explain an OCT-based prediction.>
 
-## OCT features
+## Symptoms
 
-<What this looks like on a macular OCT B-scan — the findings the classifier is
-keying on. This section is the most important for grounding the narrative.>
+<What the patient notices.>
 
-## Clinical significance
+## Risk Factors
 
-<Why it matters: visual prognosis, urgency drivers, what makes a case more or
-less concerning.>
+<Who is at higher risk.>
 
-## Management and referral
+## Management
 
-<Typical follow-up / referral pathway and timeframe, at a general level. Do NOT
-write anything that could read as a per-patient instruction — the CDS urgency
-comes from Part 1's rule engine, not from this text.>
+<Typical treatment / monitoring options, at a general level.>
+
+## Referral
+
+<General referral consideration for this finding. Do NOT write anything that
+reads as a per-patient instruction — the CDS urgency comes from Part 1's rule
+engine, not from this text.>
+
+## Model Behavior Note
+
+<This project's own evidence for this class: internal test performance, external
+clinic performance (or "not represented in the external set"), and any
+documented confusion pattern. Describes PAST validation results, not the current
+case. The narrator may cite this to add a grounded caveat.>

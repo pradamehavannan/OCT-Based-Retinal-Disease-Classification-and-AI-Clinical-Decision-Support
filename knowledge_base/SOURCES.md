@@ -1,33 +1,33 @@
-# Knowledge base — sources
+# Knowledge Base Sources
 
-Every entry is **paraphrased / summarised**, not copied. Sources are limited to
-NEI (public domain) and open-access articles under a derivative-permitting licence
-(CC-BY / CC-BY-SA). See [`README.md`](README.md#licensing--hard-rules).
+All entries are paraphrased summaries, not verbatim reproductions. AAO/EyeWiki
+content is deliberately excluded — their terms explicitly prohibit use in AI
+systems without permission.
 
-## Entries → classes covered
+| Entry | Covers (Part 1 classes) | Source(s) | License basis |
+|---|---|---|---|
+| `amd.md` | AMD, Drusen | NEI — Age-Related Macular Degeneration (nei.nih.gov); NEI CAPT trial (ClinicalTrials.gov NCT00000167) | U.S. federal government work — public domain |
+| `cnv.md` | CNV | NEI — Age-Related Macular Degeneration (nei.nih.gov) | U.S. federal government work — public domain |
+| `dme.md` | DME | NEI — Macular Edema (nei.nih.gov) | U.S. federal government work — public domain |
+| `dr.md` | DR | NEI — Diabetic Retinopathy (nei.nih.gov) | U.S. federal government work — public domain |
+| `macular_hole.md` | Macular Hole | NEI — Macular Hole (nei.nih.gov) | U.S. federal government work — public domain |
+| `csr.md` | CSR | Varghese et al., Cureus 2022; Fung et al., Clin Exp Ophthalmol 2023 | CC-BY (Cureus) — open access, permits derivatives |
 
-| Entry (`id`) | Title | Covers (Part 1 classes) |
-|---|---|---|
-| _paste on entry import_ | | |
+Every pathology class (AMD, CNV, CSR, DME, DR, Drusen, Macular Hole) appears in
+exactly one entry. `Normal` has no entry — a `Normal` prediction skips the RAG
+narrator entirely.
 
-<!-- Every pathology class (AMD, CNV, CSR, DME, DR, Drusen, Macular Hole) must
-     appear in exactly one row. Normal is intentionally absent. -->
+## Open item
 
-## Sources per entry
-
-### `<id>` — <title>
-
-- **<source name>** — <url> — *<licence>*
-  - used for: <which sections / claims>
-- **<source name>** — <url> — *<licence>*
-  - used for: ...
-
-<!-- repeat per entry -->
+- **`csr.md` — Fung AT et al. (Clinical & Experimental Ophthalmology, 2023).**
+  This journal is not open-access by default. Confirm this specific article is
+  CC-BY / open-access; if it is not, remove it from `csr.md`'s `sources` (the
+  Cureus review already covers the same ground under CC-BY).
 
 ## Licence check
 
-- [ ] No AAO Preferred Practice Pattern material
-- [ ] No EyeWiki material
-- [ ] No StatPearls (CC-BY-NC-ND — no derivatives)
-- [ ] Every non-NEI source is CC-BY or CC-BY-SA
-- [ ] All text paraphrased, nothing verbatim
+- [x] No AAO Preferred Practice Pattern material
+- [x] No EyeWiki material
+- [x] No StatPearls (CC-BY-NC-ND — no derivatives)
+- [ ] Every non-NEI source is CC-BY or CC-BY-SA  ← pending the Fung et al. check above
+- [x] All text paraphrased, nothing verbatim

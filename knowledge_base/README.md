@@ -29,32 +29,36 @@ Front matter (YAML) + Markdown body. See [`_TEMPLATE.md`](_TEMPLATE.md).
 
 ```yaml
 ---
-id: amd                      # unique slug; becomes the passage-id prefix
-title: Age-related Macular Degeneration
-covers: [AMD, Drusen, CNV]   # Part 1 class keys this entry is THE reference for
+title: Age-Related Macular Degeneration and Drusen
+covers: [AMD, Drusen]        # Part 1 class keys this entry is THE reference for
 kb_version: 1
-sources:
-  - name: "National Eye Institute — Age-Related Macular Degeneration"
-    url: "https://www.nei.nih.gov/learn-about-eye-health/eye-conditions-and-diseases/age-related-macular-degeneration"
-    licence: "public-domain (U.S. federal)"
-  - name: "Author et al. (2023). Title. Journal. doi:10.xxxx/xxxxx"
-    url: "https://doi.org/10.xxxx/xxxxx"
-    licence: "CC-BY-4.0"
+sources:                     # list of citation strings
+  - "National Eye Institute — Age-Related Macular Degeneration (AMD), nei.nih.gov, last updated Jun 22 2021"
+  - "Author et al. (2023). Title. Journal. (open access, CC-BY)"
 ---
 ```
 
-Body — one thought per `##` section, self-contained (a clinician should get a
-complete point from a single passage). Recommended sections, in this order:
+- **`id`** is the filename stem (`amd.md` → `amd`) — no `id:` field. It is the
+  passage-id prefix.
+- **`sources`** is a plain list of citation strings. (Structured
+  `{name, url, licence}` items are also accepted, but not required.)
+
+Body — one self-contained thought per `##` section (a clinician should get a
+complete point from a single passage). Section titles are flexible; the current
+entries use:
 
 ```markdown
-## Overview
-## OCT features
-## Clinical significance
-## Management and referral
+## Overview          (a line on the OCT appearance here helps ground the narrative)
+## Symptoms
+## Risk Factors
+## Management
+## Referral
+## Model Behavior Note   (this project's own validation evidence for the class)
 ```
 
-Sections are flexible, but keep them focused and titled — the title is shown to
-the clinician as the citation label.
+The heading is shown to the clinician as the citation label. `## Model Behavior
+Note` sections describe **past validation results**, not the current case — the
+narrator prompt is told to keep that distinction.
 
 ## The `covers` mapping
 
@@ -78,8 +82,9 @@ Requirements (validated at ingest — the build fails otherwise):
 
 ## Passage ids & citations
 
-- Passage id: `{entry id}#{heading slug}` — e.g. `amd#oct-features`.
-- The narrator cites inline as `[amd#oct-features]`; the report expands each cited
+- Passage id: `{entry id}#{heading slug}` — e.g. `amd#overview`,
+  `csr#model-behavior-note`.
+- The narrator cites inline as `[amd#overview]`; the report expands each cited
   passage to its entry's `sources` in a References block.
 - Ids are deterministic (file + heading), so citations and the narrative cache
   stay stable across runs.
