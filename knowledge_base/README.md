@@ -66,9 +66,15 @@ differential classes.
 Requirements (validated at ingest — the build fails otherwise):
 
 - The 7 **pathology** classes — `AMD`, `CNV`, `CSR`, `DME`, `DR`, `Drusen`,
-  `Macular Hole` — must each appear in **exactly one** entry's `covers`.
-- `Normal` must **not** appear anywhere. A `Normal` prediction skips RAG entirely
-  and passes through Part 1's plain "no pathology detected" output — no LLM call.
+  `Macular Hole` — must each appear in **exactly one** entry's `covers`. One
+  entry may cover several classes (e.g. an AMD entry covering `AMD`, `Drusen`,
+  `CNV`).
+- An entry may have an **empty `covers`** — a general reference (e.g. "reading a
+  macular OCT"). It is retrieved semantically only, never as a class's designated
+  entry.
+- `Normal` must **not** appear in any `covers`. A `Normal` prediction skips RAG
+  entirely and passes through Part 1's plain "no pathology detected" output — no
+  LLM call.
 
 ## Passage ids & citations
 

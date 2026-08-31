@@ -3,7 +3,7 @@ id: <slug>                       # unique, lowercase, [a-z0-9-]; e.g. "amd", "ma
 title: <Human-readable disease name>
 covers: [<ClassKey>, ...]        # exact Part 1 class keys, e.g. [AMD, Drusen, CNV]
                                  # valid keys: AMD CNV CSR DME DR Drusen "Macular Hole"
-                                 # NOT "Normal"
+                                 # NOT "Normal". Use [] for a general reference entry.
 kb_version: 1                    # bump when the content changes
 sources:
   - name: "National Eye Institute — <page title>"
