@@ -55,6 +55,39 @@ def test_cache_makes_it_reproducible(tmp_path):
     assert a.text == b.text and a.retrieved_ids == b.retrieved_ids
 
 
+class _Flakey:
+    """Uncited on the first call, cited on the second (mimics a small model that
+    needs the retry nudge)."""
+    name = "flakey"
+
+    def __init__(self):
+        self.calls = 0
+
+    def generate(self, system, user, *, max_tokens, temperature):
+        self.calls += 1
+        import re
+        pid = re.findall(r"\[([a-z0-9][a-z0-9#\-]*)\]", user)[0]
+        if self.calls == 1:
+            return "The OCT is consistent with the predicted finding, a chronic process."
+        return f"The OCT is consistent with the predicted finding [{pid}]."
+
+
+def test_retry_recovers_a_missing_citation(tmp_path):
+    be = _Flakey()
+    n = Narrator(backend=be, cache=NarrativeCache(tmp_path / "c"), retry_uncited=1)
+    res = n.narrate(_rec("CNV"), CASE)
+    assert be.calls == 2
+    assert res.narrative.verified and not res.narrative.fallback_used
+    assert "took 2 attempts" in res.narrative.flags
+
+
+def test_no_retry_when_disabled(tmp_path):
+    be = _Flakey()
+    n = Narrator(backend=be, cache=NarrativeCache(tmp_path / "c"), retry_uncited=0)
+    res = n.narrate(_rec("CNV"), CASE)
+    assert be.calls == 1 and res.narrative.fallback_used
+
+
 def test_build_report_attaches_rag_fields(tmp_path):
     probs = {k: (0.9 if k == "Macular Hole" else 0.1 / 7) for k in
              ["AMD", "CNV", "CSR", "DME", "DR", "Drusen", "Macular Hole", "Normal"]}

@@ -44,6 +44,7 @@ class Narrator:
         cache: NarrativeCache | None = None,
         max_tokens: int = 400,
         temperature: float = 0.0,
+        retry_uncited: int = 1,
     ):
         self.backend = backend or StubBackend()
         self.kb = kb or load_knowledge_base()
@@ -53,6 +54,7 @@ class Narrator:
         self.cache = cache if cache is not None else NarrativeCache()
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.retry_uncited = int(retry_uncited)
 
     # -- main entry ------------------------------------------------
     def narrate(self, rec: Recommendation, case: CaseInput) -> NarratorResult:
@@ -76,15 +78,16 @@ class Narrator:
             return NarratorResult(True, GroundedNarrative(**cached))
 
         user = build_user_prompt(rec, case, retrieved)
-        raw = self.backend.generate(
-            SYSTEM, user, max_tokens=self.max_tokens, temperature=self.temperature
-        )
-        vr = verify_narrative(raw, rec, set(retrieved_ids), strict=self.strict_verify)
+        raw, vr, attempts = self._generate_verified(user, rec, set(retrieved_ids))
+        flags = list(vr.flags)
+        if attempts > 1:
+            flags.append(f"took {attempts} attempts")
 
         if vr.hard_fail:
-            log.warning("narrative rejected (%s) -> Part 1 fallback", vr.flags)
+            log.warning("narrative rejected after %d attempt(s) (%s) -> Part 1 fallback",
+                        attempts, vr.flags)
             gn = GroundedNarrative(
-                text="", raw_text=raw.strip(), verified=False, flags=vr.flags,
+                text="", raw_text=raw.strip(), verified=False, flags=flags,
                 fallback_used=True, model=model_id, kb_version=kb_version,
                 retrieved_ids=retrieved_ids,
             )
@@ -96,7 +99,7 @@ class Narrator:
             raw_text=raw.strip(),
             citations=self._citations(vr.cited_ids),
             verified=True,
-            flags=vr.flags,
+            flags=flags,
             fallback_used=False,
             model=model_id,
             kb_version=kb_version,
@@ -106,6 +109,32 @@ class Narrator:
         return NarratorResult(True, gn)
 
     # -- helpers --------------------------------------------------
+    _CITE_FLAG = ("no citations", "citations not in retrieved set")
+
+    def _generate_verified(self, user: str, rec, rid_set: set):
+        """Generate, verify, and retry up to `retry_uncited` times when the ONLY
+        problem is missing / bad citations (small models get the content right
+        but skip the marker)."""
+        msg = user
+        raw = vr = None
+        for attempt in range(1, self.retry_uncited + 2):
+            raw = self.backend.generate(
+                SYSTEM, msg, max_tokens=self.max_tokens, temperature=self.temperature
+            )
+            vr = verify_narrative(raw, rec, rid_set, strict=self.strict_verify)
+            if not vr.hard_fail:
+                return raw, vr, attempt
+            if not all(any(k in f for k in self._CITE_FLAG) for f in vr.flags):
+                return raw, vr, attempt          # a non-citation failure — don't retry
+            if attempt <= self.retry_uncited:
+                msg = user + (
+                    f"\n\nYOUR PREVIOUS ATTEMPT WAS REJECTED: {vr.flags}. "
+                    "Rewrite the narrative. Put a [passage#id] from the REFERENCE "
+                    "PASSAGES list at the end of every factual sentence. Do not "
+                    "invent ids."
+                )
+        return raw, vr, self.retry_uncited + 1
+
     def _citations(self, ids: list[str]) -> list[dict]:
         out = []
         for pid in ids:

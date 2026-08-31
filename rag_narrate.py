@@ -106,6 +106,7 @@ def main(cfg: DictConfig) -> None:
         strict_verify=bool(rag_cfg["verify"]["strict"]),
         max_tokens=int(backend_cfg.get("max_tokens", 400)),
         temperature=float(backend_cfg.get("temperature", 0.0)),
+        retry_uncited=int(backend_cfg.get("retry_uncited", 1)),
     )
 
     ood_mode = rr.get("ood", "msp")

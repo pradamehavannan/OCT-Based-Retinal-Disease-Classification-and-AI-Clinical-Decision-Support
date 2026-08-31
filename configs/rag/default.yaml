@@ -17,6 +17,7 @@ llm:
   api_key_env: ANTHROPIC_API_KEY
   max_tokens: 400
   temperature: 0.0                   # deterministic
+  retry_uncited: 1                   # re-ask once if the only fault is missing citations
 
 verify:
   strict: true                       # any contradiction flag -> Part 1 fallback
