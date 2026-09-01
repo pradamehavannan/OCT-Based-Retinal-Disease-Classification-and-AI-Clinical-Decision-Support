@@ -191,7 +191,6 @@ model-abstained; of the 15 remaining, **15/15 (100%) produced a verified,
 fully-cited narrative** (12 first-shot, 3 after one citation retry), with zero
 fallbacks and zero unresolved citations.
 
-<!-- Add docs/figures/case_browser.png — see docs/figures/README.md -->
 ![Clinic Case Browser — the Drusen case: OCT scan, Part 1's frozen decision, and the grounded narrative with highlighted citation markers and a VERIFIED badge](docs/figures/case_browser.png)
 
 *[`app/case_browser.py`](app/case_browser.py) — a chat-style Streamlit viewer
