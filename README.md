@@ -236,6 +236,7 @@ src/oct_cds/
                     LLM backends, prompt, narrator, verify.py guardrail, cache
 train.py  eval.py  explain.py  cds.py    Hydra entrypoints (train → eval → explain → CDS)
 rag_narrate.py                           Part 2 entrypoint (grounded narrative layer)
+app/case_browser.py         Streamlit viewer for the pre-computed clinic narratives
 notebooks/demo.ipynb        Part 1 end-to-end walkthrough
 notebooks/demo_part2.ipynb  Part 2 walkthrough (knowledge base, a narrated case, verify stats)
 tests/
@@ -362,6 +363,15 @@ prints the command to run if its artifact is missing.
 [`notebooks/demo_part2.ipynb`](notebooks/demo_part2.ipynb) does the same for
 Part 2 — the knowledge base, one narrated case with its citation-grounded
 narrative, and the verification summary (`pip install -e ".[notebook,rag]"`).
+
+### Case browser app
+
+[`app/case_browser.py`](app/case_browser.py) is a chat-style Streamlit app for
+browsing all 37 pre-computed clinic narratives — the OCT scan, Part 1's frozen
+decision, and the grounded narrative (or the "skipped / fell back" notice), with
+a Verified indicator from `narrator_meta`. No model, no GPU. See
+[app/README.md](app/README.md) for the local and Kaggle (cloudflared tunnel) run
+recipes.
 
 ## Reproducing this project
 
